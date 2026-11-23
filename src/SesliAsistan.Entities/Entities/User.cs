@@ -13,6 +13,10 @@ public class User : BaseEntity, ISoftDeletable
     public bool IsActive { get; set; } = true;
     public DateTime? LastLoginAt { get; set; }
 
+    // FG-8: Moderasyon ve askıya alma
+    public bool IsSuspended { get; set; }
+    public DateTime? SuspensionExpiresAt { get; set; }
+
     // FG-3: Kullanıcının varsayılan seslendirme tercihleri
     public string PreferredVoice { get; set; } = "tr-TR-Female-1";
     public decimal PlaybackSpeed { get; set; } = 1.0m;

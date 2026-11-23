@@ -28,6 +28,7 @@ public class AppDbContext : DbContext
     public DbSet<ContentReport> ContentReports => Set<ContentReport>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<PasswordResetCode> PasswordResetCodes => Set<PasswordResetCode>();
+    public DbSet<AdminAction> AdminActions => Set<AdminAction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

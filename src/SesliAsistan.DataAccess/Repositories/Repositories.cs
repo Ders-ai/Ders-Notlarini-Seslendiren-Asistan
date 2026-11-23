@@ -170,6 +170,277 @@ public class SummaryRepository : GenericRepository<Summary>, ISummaryRepository
         Set.FirstOrDefaultAsync(s => s.DocumentId == documentId && s.Length == length, ct);
 }
 
+// ---- FG-6: Bilgi Kartı ve Test Repositories ----
+
+public interface IFlashcardDeckRepository : IGenericRepository<FlashcardDeck>
+{
+    Task<FlashcardDeck?> GetWithCardsAsync(Guid deckId, CancellationToken ct = default);
+    Task<IReadOnlyList<FlashcardDeck>> GetByOwnerAsync(Guid ownerId, CancellationToken ct = default);
+}
+
+public class FlashcardDeckRepository : GenericRepository<FlashcardDeck>, IFlashcardDeckRepository
+{
+    public FlashcardDeckRepository(AppDbContext context) : base(context) { }
+
+    public Task<FlashcardDeck?> GetWithCardsAsync(Guid deckId, CancellationToken ct = default) =>
+        Set.Include(d => d.Cards.OrderBy(c => c.OrderIndex))
+           .FirstOrDefaultAsync(d => d.Id == deckId, ct);
+
+    public async Task<IReadOnlyList<FlashcardDeck>> GetByOwnerAsync(Guid ownerId, CancellationToken ct = default) =>
+        await Set.AsNoTracking()
+                 .Where(d => d.OwnerId == ownerId)
+                 .Include(d => d.Cards)
+                 .OrderByDescending(d => d.CreatedAt)
+                 .ToListAsync(ct);
+}
+
+public interface IQuizRepository : IGenericRepository<Quiz>
+{
+    Task<Quiz?> GetWithQuestionsAsync(Guid quizId, CancellationToken ct = default);
+    Task<IReadOnlyList<Quiz>> GetByOwnerAsync(Guid ownerId, CancellationToken ct = default);
+    Task<int> GetDailyCountAsync(Guid userId, DateTime dateUtc, CancellationToken ct = default);
+}
+
+public class QuizRepository : GenericRepository<Quiz>, IQuizRepository
+{
+    public QuizRepository(AppDbContext context) : base(context) { }
+
+    public Task<Quiz?> GetWithQuestionsAsync(Guid quizId, CancellationToken ct = default) =>
+        Set.Include(q => q.Questions.OrderBy(x => x.OrderIndex))
+           .FirstOrDefaultAsync(q => q.Id == quizId, ct);
+
+    public async Task<IReadOnlyList<Quiz>> GetByOwnerAsync(Guid ownerId, CancellationToken ct = default) =>
+        await Set.AsNoTracking()
+                 .Where(q => q.OwnerId == ownerId)
+                 .Include(q => q.Questions)
+                 .OrderByDescending(q => q.CreatedAt)
+                 .ToListAsync(ct);
+
+    public Task<int> GetDailyCountAsync(Guid userId, DateTime dateUtc, CancellationToken ct = default)
+    {
+        var startOfDay = dateUtc.Date;
+        var endOfDay = startOfDay.AddDays(1);
+        return Set.CountAsync(q => q.OwnerId == userId && q.CreatedAt >= startOfDay && q.CreatedAt < endOfDay, ct);
+    }
+}
+
+public interface IQuizAttemptRepository : IGenericRepository<QuizAttempt>
+{
+    Task<IReadOnlyList<QuizAttempt>> GetHistoryByQuizAsync(Guid quizId, Guid userId, CancellationToken ct = default);
+}
+
+public class QuizAttemptRepository : GenericRepository<QuizAttempt>, IQuizAttemptRepository
+{
+    public QuizAttemptRepository(AppDbContext context) : base(context) { }
+
+    public async Task<IReadOnlyList<QuizAttempt>> GetHistoryByQuizAsync(Guid quizId, Guid userId, CancellationToken ct = default) =>
+        await Set.AsNoTracking()
+                 .Where(a => a.QuizId == quizId && a.UserId == userId)
+                 .OrderByDescending(a => a.CompletedAt)
+                 .ToListAsync(ct);
+}
+
+// ---- FG-7: İşbirlikçi Ağ Repositories ----
+
+public interface IFriendshipRepository : IGenericRepository<Friendship>
+{
+    Task<Friendship?> FindRelationshipAsync(Guid userA, Guid userB, CancellationToken ct = default);
+    Task<IReadOnlyList<Guid>> GetFriendIdsAsync(Guid userId, CancellationToken ct = default);
+    Task<IReadOnlyList<Friendship>> GetFriendsAndPendingAsync(Guid userId, CancellationToken ct = default);
+    Task<bool> AreFriendsAsync(Guid userA, Guid userB, CancellationToken ct = default);
+}
+
+public class FriendshipRepository : GenericRepository<Friendship>, IFriendshipRepository
+{
+    public FriendshipRepository(AppDbContext context) : base(context) { }
+
+    public Task<Friendship?> FindRelationshipAsync(Guid userA, Guid userB, CancellationToken ct = default) =>
+        Set.Include(f => f.Requester)
+           .Include(f => f.Addressee)
+           .FirstOrDefaultAsync(f =>
+                (f.RequesterId == userA && f.AddresseeId == userB) ||
+                (f.RequesterId == userB && f.AddresseeId == userA), ct);
+
+    public async Task<IReadOnlyList<Guid>> GetFriendIdsAsync(Guid userId, CancellationToken ct = default) =>
+        await Set.AsNoTracking()
+                 .Where(f => f.Status == FriendshipStatus.Accepted && (f.RequesterId == userId || f.AddresseeId == userId))
+                 .Select(f => f.RequesterId == userId ? f.AddresseeId : f.RequesterId)
+                 .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<Friendship>> GetFriendsAndPendingAsync(Guid userId, CancellationToken ct = default) =>
+        await Set.AsNoTracking()
+                 .Include(f => f.Requester)
+                 .Include(f => f.Addressee)
+                 .Where(f => f.RequesterId == userId || f.AddresseeId == userId)
+                 .ToListAsync(ct);
+
+    public Task<bool> AreFriendsAsync(Guid userA, Guid userB, CancellationToken ct = default) =>
+        Set.AnyAsync(f => f.Status == FriendshipStatus.Accepted &&
+            ((f.RequesterId == userA && f.AddresseeId == userB) || (f.RequesterId == userB && f.AddresseeId == userA)), ct);
+}
+
+public interface IStudyGroupRepository : IGenericRepository<StudyGroup>
+{
+    Task<StudyGroup?> GetByInviteCodeAsync(string code, CancellationToken ct = default);
+    Task<StudyGroup?> GetWithMembersAsync(Guid groupId, CancellationToken ct = default);
+    Task<IReadOnlyList<Guid>> GetUserGroupIdsAsync(Guid userId, CancellationToken ct = default);
+    Task<IReadOnlyList<StudyGroup>> GetUserGroupsAsync(Guid userId, CancellationToken ct = default);
+    Task<bool> IsMemberAsync(Guid groupId, Guid userId, CancellationToken ct = default);
+}
+
+public class StudyGroupRepository : GenericRepository<StudyGroup>, IStudyGroupRepository
+{
+    public StudyGroupRepository(AppDbContext context) : base(context) { }
+
+    public Task<StudyGroup?> GetByInviteCodeAsync(string code, CancellationToken ct = default) =>
+        Set.Include(g => g.Members)
+           .FirstOrDefaultAsync(g => g.InviteCode == code, ct);
+
+    public Task<StudyGroup?> GetWithMembersAsync(Guid groupId, CancellationToken ct = default) =>
+        Set.Include(g => g.Members).ThenInclude(m => m.User)
+           .FirstOrDefaultAsync(g => g.Id == groupId, ct);
+
+    public async Task<IReadOnlyList<Guid>> GetUserGroupIdsAsync(Guid userId, CancellationToken ct = default) =>
+        await Context.GroupMembers.AsNoTracking()
+                     .Where(m => m.UserId == userId)
+                     .Select(m => m.GroupId)
+                     .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<StudyGroup>> GetUserGroupsAsync(Guid userId, CancellationToken ct = default) =>
+        await Set.AsNoTracking()
+                 .Where(g => g.Members.Any(m => m.UserId == userId))
+                 .Include(g => g.Members)
+                 .ToListAsync(ct);
+
+    public Task<bool> IsMemberAsync(Guid groupId, Guid userId, CancellationToken ct = default) =>
+        Context.GroupMembers.AnyAsync(m => m.GroupId == groupId && m.UserId == userId, ct);
+}
+
+public interface ISharedContentRepository : IGenericRepository<SharedContent>
+{
+    Task<SharedContent?> GetByContentAsync(SharedContentType type, Guid contentId, CancellationToken ct = default);
+    Task<IReadOnlyList<SharedContent>> GetFeedAsync(
+        Guid userId,
+        IReadOnlyList<Guid> friendIds,
+        IReadOnlyList<Guid> groupIds,
+        DateTime? cursorDate,
+        Guid? cursorId,
+        int limit,
+        CancellationToken ct = default);
+}
+
+public class SharedContentRepository : GenericRepository<SharedContent>, ISharedContentRepository
+{
+    public SharedContentRepository(AppDbContext context) : base(context) { }
+
+    public Task<SharedContent?> GetByContentAsync(SharedContentType type, Guid contentId, CancellationToken ct = default) =>
+        Set.Include(s => s.Owner)
+           .Include(s => s.Group)
+           .FirstOrDefaultAsync(s => s.ContentType == type && s.ContentId == contentId && !s.IsRemoved, ct);
+
+    public async Task<IReadOnlyList<SharedContent>> GetFeedAsync(
+        Guid userId,
+        IReadOnlyList<Guid> friendIds,
+        IReadOnlyList<Guid> groupIds,
+        DateTime? cursorDate,
+        Guid? cursorId,
+        int limit,
+        CancellationToken ct = default)
+    {
+        // Yetki filtresi: Public HERKESE, Friends ARKADAŞLARA, Group GRUP ÜYELERİNE, Private SADECE SAHİBİNE
+        var query = Set.AsNoTracking()
+            .Include(s => s.Owner)
+            .Where(s => !s.IsRemoved && !s.IsUnderReview)
+            .Where(s =>
+                s.OwnerId == userId ||
+                s.Privacy == PrivacyLevel.Public ||
+                (s.Privacy == PrivacyLevel.Friends && friendIds.Contains(s.OwnerId)) ||
+                (s.Privacy == PrivacyLevel.Group && s.GroupId.HasValue && groupIds.Contains(s.GroupId.Value)));
+
+        // İmleç tabanlı sayfalama (cursor-based pagination)
+        if (cursorDate.HasValue && cursorId.HasValue)
+        {
+            query = query.Where(s => s.CreatedAt < cursorDate.Value ||
+                                    (s.CreatedAt == cursorDate.Value && s.Id.CompareTo(cursorId.Value) < 0));
+        }
+
+        return await query
+            .OrderByDescending(s => s.CreatedAt)
+            .ThenByDescending(s => s.Id)
+            .Take(limit)
+            .ToListAsync(ct);
+    }
+}
+
+// ---- FG-8: Şikâyet ve Moderasyon Repositories ----
+
+public interface IContentReportRepository : IGenericRepository<ContentReport>
+{
+    Task<IReadOnlyList<ContentReport>> GetOpenReportsAsync(CancellationToken ct = default);
+    Task<int> CountRecentReportsByUserAsync(Guid userId, DateTime since, CancellationToken ct = default);
+    Task<int> GetReportCountForContentAsync(Guid sharedContentId, CancellationToken ct = default);
+    Task<bool> HasUserReportedAsync(Guid userId, Guid sharedContentId, CancellationToken ct = default);
+}
+
+public class ContentReportRepository : GenericRepository<ContentReport>, IContentReportRepository
+{
+    public ContentReportRepository(AppDbContext context) : base(context) { }
+
+    public async Task<IReadOnlyList<ContentReport>> GetOpenReportsAsync(CancellationToken ct = default) =>
+        await Set.AsNoTracking()
+                 .Where(r => r.Status == ReportStatus.Open || r.Status == ReportStatus.UnderReview)
+                 .Include(r => r.Reporter)
+                 .Include(r => r.SharedContent)
+                 .OrderByDescending(r => r.CreatedAt)
+                 .ToListAsync(ct);
+
+    public Task<int> CountRecentReportsByUserAsync(Guid userId, DateTime since, CancellationToken ct = default) =>
+        Set.CountAsync(r => r.ReporterId == userId && r.CreatedAt >= since, ct);
+
+    public Task<int> GetReportCountForContentAsync(Guid sharedContentId, CancellationToken ct = default) =>
+        Set.CountAsync(r => r.SharedContentId == sharedContentId, ct);
+
+    public Task<bool> HasUserReportedAsync(Guid userId, Guid sharedContentId, CancellationToken ct = default) =>
+        Set.AnyAsync(r => r.ReporterId == userId && r.SharedContentId == sharedContentId, ct);
+}
+
+public interface INotificationRepository : IGenericRepository<Notification>
+{
+    Task<IReadOnlyList<Notification>> GetByUserAsync(Guid userId, int limit = 50, CancellationToken ct = default);
+    Task MarkAllAsReadAsync(Guid userId, CancellationToken ct = default);
+}
+
+public class NotificationRepository : GenericRepository<Notification>, INotificationRepository
+{
+    public NotificationRepository(AppDbContext context) : base(context) { }
+
+    public async Task<IReadOnlyList<Notification>> GetByUserAsync(Guid userId, int limit = 50, CancellationToken ct = default) =>
+        await Set.AsNoTracking()
+                 .Where(n => n.UserId == userId)
+                 .OrderByDescending(n => n.CreatedAt)
+                 .Take(limit)
+                 .ToListAsync(ct);
+
+    public async Task MarkAllAsReadAsync(Guid userId, CancellationToken ct = default)
+    {
+        var unread = await Set.Where(n => n.UserId == userId && !n.IsRead).ToListAsync(ct);
+        foreach (var n in unread)
+        {
+            n.IsRead = true;
+        }
+    }
+}
+
+public interface IAdminActionRepository : IGenericRepository<AdminAction>
+{
+}
+
+public class AdminActionRepository : GenericRepository<AdminAction>, IAdminActionRepository
+{
+    public AdminActionRepository(AppDbContext context) : base(context) { }
+}
+
+
 /// <summary>Birden fazla repository üzerindeki değişiklikleri tek işlemde kaydeder.</summary>
 public interface IUnitOfWork
 {

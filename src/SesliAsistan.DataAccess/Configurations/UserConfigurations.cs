@@ -50,6 +50,8 @@ public class StudyGroupConfiguration : IEntityTypeConfiguration<StudyGroup>
     {
         b.ToTable("study_groups");
         b.Property(x => x.Name).HasMaxLength(100).IsRequired();
+        b.Property(x => x.InviteCode).HasMaxLength(16).IsRequired();
+        b.HasIndex(x => x.InviteCode).IsUnique();
         b.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
     }
 }
@@ -71,8 +73,9 @@ public class SharedContentConfiguration : IEntityTypeConfiguration<SharedContent
     public void Configure(EntityTypeBuilder<SharedContent> b)
     {
         b.ToTable("shared_contents");
+        b.Property(x => x.Title).HasMaxLength(255).IsRequired();
         b.HasIndex(x => new { x.ContentType, x.ContentId });
-        b.HasIndex(x => x.Privacy);
+        b.HasIndex(x => new { x.Privacy, x.CreatedAt });
         b.Property(x => x.ContentType).HasConversion<string>().HasMaxLength(20);
         b.Property(x => x.Privacy).HasConversion<string>().HasMaxLength(20);
         b.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Cascade);
@@ -113,6 +116,18 @@ public class PasswordResetCodeConfiguration : IEntityTypeConfiguration<PasswordR
         b.Ignore(x => x.IsValid);
         b.HasOne(x => x.User).WithMany(u => u.PasswordResetCodes)
             .HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class AdminActionConfiguration : IEntityTypeConfiguration<AdminAction>
+{
+    public void Configure(EntityTypeBuilder<AdminAction> b)
+    {
+        b.ToTable("admin_actions");
+        b.Property(x => x.TargetType).HasMaxLength(50).IsRequired();
+        b.Property(x => x.Reason).HasMaxLength(500);
+        b.Property(x => x.ActionType).HasConversion<string>().HasMaxLength(30);
+        b.HasOne(x => x.Admin).WithMany().HasForeignKey(x => x.AdminId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

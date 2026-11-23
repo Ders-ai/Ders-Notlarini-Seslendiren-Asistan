@@ -101,6 +101,7 @@ public class QuizConfiguration : IEntityTypeConfiguration<Quiz>
     {
         b.ToTable("quizzes");
         b.Property(x => x.Title).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
         b.Property(x => x.Privacy).HasConversion<string>().HasMaxLength(20);
         b.HasOne(x => x.Document).WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Cascade);
         b.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);

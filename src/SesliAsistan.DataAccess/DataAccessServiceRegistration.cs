@@ -21,6 +21,15 @@ public static class DataAccessServiceRegistration
         services.AddScoped<IAudioAssetRepository, AudioAssetRepository>();
         services.AddScoped<IListeningProgressRepository, ListeningProgressRepository>();
         services.AddScoped<ISummaryRepository, SummaryRepository>();
+        services.AddScoped<IFlashcardDeckRepository, FlashcardDeckRepository>();
+        services.AddScoped<IQuizRepository, QuizRepository>();
+        services.AddScoped<IQuizAttemptRepository, QuizAttemptRepository>();
+        services.AddScoped<IFriendshipRepository, FriendshipRepository>();
+        services.AddScoped<IStudyGroupRepository, StudyGroupRepository>();
+        services.AddScoped<ISharedContentRepository, SharedContentRepository>();
+        services.AddScoped<IContentReportRepository, ContentReportRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<IAdminActionRepository, AdminActionRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         return services;
     }

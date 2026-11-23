@@ -28,3 +28,12 @@ public class TtsOptions
     public string DefaultVoice { get; set; } = "tr-TR-EmelNeural";
     public decimal DefaultSpeed { get; set; } = 1.0m;
 }
+
+public class GroqOptions
+{
+    public const string SectionName = "Groq";
+    /// <summary>Üretimde ortam değişkeni / user-secrets ile verilir. Boş bırakılırsa mock üretici kullanılır.</summary>
+    public string ApiKey { get; set; } = "";
+    public string Model { get; set; } = "llama-3.3-70b-versatile";
+    public int MaxDailyQuizzesPerUser { get; set; } = 10;
+}

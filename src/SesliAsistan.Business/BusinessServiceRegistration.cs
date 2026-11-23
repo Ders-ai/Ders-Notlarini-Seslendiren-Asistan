@@ -25,8 +25,12 @@ public static class BusinessServiceRegistration
         services.AddSingleton<IDocumentProcessingQueue, DocumentProcessingQueue>();
         services.AddSingleton<IEmailSender, LoggerEmailSender>();
         services.AddSingleton<ITextRankSummarizer, SesliAsistan.Business.Speech.TextRankSummarizer>();
+        services.AddSingleton<SesliAsistan.Business.Speech.IKeyTermExtractor, SesliAsistan.Business.Speech.KeyTermExtractor>();
+        services.AddSingleton<SesliAsistan.Business.Speech.IDefinitionMatcher, SesliAsistan.Business.Speech.DefinitionMatcher>();
+        services.AddSingleton<SesliAsistan.Business.Speech.IQuizValidator, SesliAsistan.Business.Speech.QuizValidator>();
 
         services.AddHttpClient<ITtsProvider, SesliAsistan.Business.Speech.AzureSpeechTtsProvider>();
+        services.AddHttpClient<SesliAsistan.Business.Speech.IQuizGenerator, SesliAsistan.Business.Speech.GroqQuizGenerator>();
 
         services.AddSingleton<ITextExtractor, PdfTextExtractor>();
         services.AddSingleton<ITextExtractor, DocxTextExtractor>();
@@ -38,6 +42,15 @@ public static class BusinessServiceRegistration
         services.AddScoped<ITtsService, TtsService>();
         services.AddScoped<IListeningProgressService, ListeningProgressService>();
         services.AddScoped<ISummaryService, SummaryService>();
+        services.AddScoped<IFlashcardService, FlashcardService>();
+        services.AddScoped<IQuizService, QuizService>();
+        services.AddScoped<IFriendshipService, FriendshipService>();
+        services.AddScoped<IShareAccessHandler, ShareAccessHandler>();
+        services.AddScoped<IShareService, ShareService>();
+        services.AddScoped<IFeedService, FeedService>();
+        services.AddScoped<IStudyGroupService, StudyGroupService>();
+        services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IModerationService, ModerationService>();
         return services;
     }
 }

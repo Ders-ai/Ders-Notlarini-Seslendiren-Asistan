@@ -17,6 +17,13 @@ public enum SummaryLength { Short = 1, Medium = 2, Detailed = 3 }
 
 public enum SharedContentType { Summary = 1, FlashcardDeck = 2, Quiz = 3 }
 
-public enum ReportStatus { Open = 0, Reviewed = 1, ContentRemoved = 2, Dismissed = 3 }
+public enum ReportStatus { Open = 0, UnderReview = 1, Reviewed = 2, ContentRemoved = 3, Dismissed = 4 }
 
 public enum GroupRole { Member = 0, Owner = 1 }
+
+/// <summary>FG-6: GenAI test üretim durumu.</summary>
+public enum QuizStatus { Pending = 0, Ready = 1, Failed = 2 }
+
+/// <summary>FG-8: Yönetici moderasyon işlem türü.</summary>
+public enum AdminActionType { RemoveContent = 1, DismissReport = 2, SuspendUser = 3, UnsuspendUser = 4 }
+

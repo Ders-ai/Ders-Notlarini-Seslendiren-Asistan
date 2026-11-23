@@ -67,9 +67,11 @@ public class Quiz : BaseEntity
 {
     public Guid DocumentId { get; set; }
     public Document Document { get; set; } = null!;
+    public Guid? SectionId { get; set; }
     public Guid OwnerId { get; set; }
     public User Owner { get; set; } = null!;
     public string Title { get; set; } = null!;
+    public QuizStatus Status { get; set; } = QuizStatus.Pending;
     public PrivacyLevel Privacy { get; set; } = PrivacyLevel.Private;
     public ICollection<QuizQuestion> Questions { get; set; } = new List<QuizQuestion>();
 }

@@ -1,5 +1,6 @@
 using SesliAsistan.API.BackgroundJobs;
 using SesliAsistan.API.Extensions;
+using SesliAsistan.API.Hubs;
 using SesliAsistan.API.Middleware;
 using SesliAsistan.Business;
 using SesliAsistan.DataAccess;
@@ -14,6 +15,7 @@ builder.Services.AddBusiness(builder.Configuration);     // İş Katmanı
 
 // ---- Sunum Katmanı altyapısı ----
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 builder.Services.AddProblemDetails();
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddAppRateLimiting();
@@ -53,6 +55,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapHealthChecks("/health");
 
 app.Run();
